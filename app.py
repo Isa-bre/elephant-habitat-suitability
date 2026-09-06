@@ -4,11 +4,14 @@ import folium
 import base64
 import json
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import numpy as np
 import requests
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from PIL import Image
 from rasterio.features import rasterize
+from rasterio.io import MemoryFile
+from rasterio.warp import transform_bounds
 from rasterio.transform import from_bounds
 from io import BytesIO
 from urllib.parse import quote, urlencode
@@ -604,6 +607,95 @@ def clipped_landcover_data_url(image_url, geometry_json, bounds):
     return "data:image/png;base64," + encoded_image
 
 
+@st.cache_data(show_spinner=False)
+def core_habitat_overlay_data(cog_url):
+
+    response = requests.get(cog_url, timeout=60)
+    response.raise_for_status()
+
+    with MemoryFile(response.content) as memory_file:
+        with memory_file.open() as dataset:
+            values = dataset.read(1)
+            bounds = transform_bounds(
+                dataset.crs,
+                "EPSG:4326",
+                *dataset.bounds,
+            )
+            nodata = dataset.nodata
+
+    habitat_mask = values > 0
+    if nodata is not None:
+        habitat_mask &= values != nodata
+
+    rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
+    rgba[habitat_mask] = [84, 58, 39, 255]
+
+    image = Image.fromarray(rgba, mode="RGBA")
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+
+    encoded_image = base64.b64encode(
+        output.getvalue()
+    ).decode("ascii")
+
+    return (
+        "data:image/png;base64," + encoded_image,
+        [
+            [bounds[1], bounds[0]],
+            [bounds[3], bounds[2]],
+        ],
+    )
+
+
+@st.cache_data(show_spinner=False)
+def connectivity_overlay_data(cog_url, color=None):
+
+    response = requests.get(cog_url, timeout=60)
+    response.raise_for_status()
+
+    with MemoryFile(response.content) as memory_file:
+        with memory_file.open() as dataset:
+            values = dataset.read(1)
+            bounds = transform_bounds(
+                dataset.crs,
+                "EPSG:4326",
+                *dataset.bounds,
+            )
+            nodata = dataset.nodata
+            try:
+                native_colormap = dataset.colormap(1)
+            except ValueError:
+                native_colormap = None
+
+    mask = values > 0
+    if nodata is not None:
+        mask &= values != nodata
+
+    rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
+
+    if native_colormap:
+        color_table = np.array(
+            [native_colormap.get(index, (0, 0, 0, 0)) for index in range(256)],
+            dtype=np.uint8,
+        )
+        rgba[mask] = color_table[values[mask]]
+    elif color:
+        rgba[mask] = [*color, 255]
+
+    image = Image.fromarray(rgba, mode="RGBA")
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    encoded_image = base64.b64encode(output.getvalue()).decode("ascii")
+
+    return (
+        "data:image/png;base64," + encoded_image,
+        [
+            [bounds[1], bounds[0]],
+            [bounds[3], bounds[2]],
+        ],
+    )
+
+
 LANDCOVER_CLIPPED_DATA_URL = clipped_landcover_data_url(
     LANDCOVER_IMAGE_URL,
     json.dumps(KAZA_GEOMETRY, separators=(",", ":")),
@@ -626,6 +718,23 @@ def add_kaza_boundary(m):
     ).add_to(m)
 
 
+def add_suitability_extent_box(m):
+
+    folium.Rectangle(
+        bounds=[
+            [kaza_bbox[1], kaza_bbox[0]],
+            [kaza_bbox[3], kaza_bbox[2]],
+        ],
+        name="Suitability map extent",
+        color="#543A27",
+        weight=1,
+        opacity=0.45,
+        fill=False,
+        dash_array="4 5",
+        interactive=False,
+    ).add_to(m)
+
+
 def add_landcover_layer(m, layer_opacity):
 
     folium.raster_layers.ImageOverlay(
@@ -638,7 +747,7 @@ def add_landcover_layer(m, layer_opacity):
     ).add_to(m)
 
 
-def add_map_controls(m, with_opacity=False):
+def add_map_controls(m, with_opacity=False, base_opacity=0.8):
 
     add_metric_scale_control(m)
 
@@ -650,12 +759,13 @@ def add_map_controls(m, with_opacity=False):
         control=True,
         show=False,
         max_zoom=19,
+        opacity=base_opacity,
     ).add_to(m)
 
     m.add_layer_control()
 
     if with_opacity:
-        add_integrated_opacity_controls(m)
+        add_integrated_opacity_controls(m, base_opacity)
 
     add_reorderable_layer_list(m)
 
@@ -666,22 +776,201 @@ def add_reorderable_layer_list(m):
 
     reorder_js = f"""
     <style>
+        .leaflet-control-layers {{
+            width: 360px;
+            height: 30px;
+            max-width: 30px;
+            border: 1px solid #D7C6A0 !important;
+            border-radius: 2px !important;
+            background: #FFFDF5 !important;
+            box-shadow: 0 5px 18px rgba(40, 26, 11, 0.22) !important;
+            color: #281A0B;
+        }}
+
+        .leaflet-control-container,
+        .leaflet-control-container .leaflet-control {{
+            position: relative;
+            z-index: 2000 !important;
+        }}
+
+        .leaflet-control-layers:not(.leaflet-control-layers-expanded) .leaflet-control-layers-list {{
+            display: none;
+        }}
+
+        .leaflet-control-layers-toggle {{
+            width: 30px !important;
+            height: 30px !important;
+            border: 1px solid #D7C6A0 !important;
+            border-radius: 2px !important;
+            background-color: #FFFDF5 !important;
+            background-image: none !important;
+            box-shadow: 0 1px 5px rgba(40, 26, 11, 0.24);
+            position: relative;
+        }}
+
+        .leaflet-control-layers-toggle::before {{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: url("https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/images/layers-2x.png") center / 18px 18px no-repeat;
+        }}
+
+        .leaflet-control-layers-toggle:hover {{
+            background-color: #E2D0A2 !important;
+        }}
+
+        .leaflet-control-layers-expanded {{
+            width: 360px !important;
+            height: auto !important;
+            max-width: 360px !important;
+            border-radius: 10px !important;
+        }}
+
+        .leaflet-control-layers-list {{
+            margin: 0;
+            padding: 8px 10px 10px;
+            height: auto;
+            min-height: 0;
+            max-height: 360px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }}
+
+        .leaflet-control-layers-overlays input[type="checkbox"] {{
+            accent-color: #543A27;
+        }}
+
+        .leaflet-control-layers-base input[type="radio"] {{
+            accent-color: #543A27;
+        }}
+
         .leaflet-control-layers-overlays label {{
             cursor: default;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 92px;
+            align-items: center;
+            column-gap: 6px;
+            min-height: 30px;
+            margin: 2px 0;
+            padding: 3px 4px;
+            border-radius: 3px;
+            color: #543A27;
+            font-size: 12px;
+        }}
+
+        .leaflet-control-layers-overlays label:hover {{
+            background: #E2D0A2;
         }}
 
         .leafmap-layer-drag-handle {{
-            display: none !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 28px;
+            width: 28px;
+            height: 18px;
+            margin-right: 3px;
+            color: transparent;
+            cursor: grab;
+            background-image: radial-gradient(circle, #543A27 1.6px, transparent 2px);
+            background: none;
+            touch-action: none;
+            user-select: none;
+            position: relative;
+            grid-column: 1;
+        }}
+
+        .leafmap-layer-drag-handle::before {{
+            content: "";
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            left: 6px;
+            top: 1px;
+            border-radius: 50%;
+            background: #543A27;
+            box-shadow:
+                6px 0 #543A27,
+                0 6px #543A27,
+                6px 6px #543A27,
+                0 12px #543A27,
+                6px 12px #543A27;
+        }}
+
+        .leafmap-layer-drag-handle:active {{
+            cursor: grabbing;
+        }}
+
+        .leaflet-control-layers-overlays label.layer-drop-target {{
+            outline: 1px dashed #AE873B;
+            outline-offset: -1px;
+            background: #F3E8CC;
+        }}
+
+        .leaflet-control-layers-overlays label[draggable="true"] {{
+            cursor: grab;
+        }}
+
+        .leaflet-control-layers-overlays label.layer-dragging {{
+            cursor: grabbing;
+        }}
+
+        .leaflet-control-layers-overlays label > span:nth-child(1) {{
+            min-width: 0;
+            overflow: visible;
+            white-space: normal;
+            line-height: 1.25;
+        }}
+
+        .leaflet-control-layers-overlays label > span:nth-child(1) > span {{
+            white-space: normal;
+            overflow-wrap: anywhere;
         }}
 
         .leafmap-layer-order-button {{
-            margin-left: 4px;
-            padding: 0 3px;
+            margin-left: 1px;
+            padding: 0 4px;
             color: #543A27;
             border: 0;
+            border-radius: 3px;
             background: transparent;
             cursor: pointer;
             font-weight: 700;
+        }}
+
+        .leafmap-layer-order-button:hover {{
+            background: #AE873B;
+            color: #FFFDF5;
+        }}
+
+        .leafmap-layer-opacity {{
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            justify-content: end;
+            width: 92px;
+            grid-column: 2;
+            color: #5D6414;
+            font-size: 10px;
+            white-space: nowrap;
+        }}
+
+        .leafmap-layer-opacity input {{
+            width: 52px;
+            flex: 0 0 52px;
+            accent-color: #543A27;
+            cursor: ew-resize;
+        }}
+
+        .leafmap-layer-opacity span {{
+            width: 28px;
+            text-align: right;
+        }}
+
+        .leaflet-control-layers-overlays label > span:nth-child(1) {{
+            grid-column: 1;
+            min-width: 0;
+            width: auto;
         }}
 
         .leaflet-control-layers-overlays label.layer-dragging {{
@@ -707,10 +996,11 @@ def add_reorderable_layer_list(m):
             }}
 
             overlayList.dataset.reorderReady = 'true';
+            return;
 
             let draggedLabel = null;
 
-            function findLayerByName(layerName) {{
+            function findLayerByName(layerName){{
                 let found = null;
                 Object.values(map._layers).some(function(layer) {{
                     const options = layer.options || {{}};
@@ -721,7 +1011,41 @@ def add_reorderable_layer_list(m):
                     }}
                     return false;
                 }});
+
+                if (found) {{
+                    return found;
+                }}
+
+                Object.values(window).some(function(candidate){{
+                    if (candidate && candidate.overlays && candidate.overlays[layerName]) {{
+                        found = candidate.overlays[layerName];
+                        return true;
+                    }}
+                    return false;
+                }});
+
                 return found;
+            }}
+
+            function applyLayerOrder() {{
+                Array.from(overlayList.querySelectorAll('label')).forEach(function(item, index){{
+                    const layer = findLayerByName(item.dataset.layerName);
+                    if (!layer) {{
+                        return;
+                    }}
+
+                    const zIndex = 1000 - index;
+                    if (layer.setZIndex) {{
+                        layer.setZIndex(zIndex);
+                    }}
+                    if (layer.eachLayer) {{
+                        layer.eachLayer(function(child){{
+                            if (child.setZIndex) {{
+                                child.setZIndex(zIndex);
+                            }}
+                        }});
+                    }}
+                }});
             }}
 
             function reorderLabel(label, direction) {{
@@ -755,51 +1079,87 @@ def add_reorderable_layer_list(m):
             }}
 
             overlayList.querySelectorAll('label').forEach(function(label){{
-                label.dataset.layerName = label.textContent.trim();
+                label.dataset.layerName = label.dataset.layerName || label.textContent.trim();
+                label.draggable = true;
 
                 const handle = document.createElement('span');
                 handle.className = 'leafmap-layer-drag-handle';
-                handle.textContent = '↕';
+                handle.textContent = '';
                 handle.title = 'Drag to change layer order';
                 handle.draggable = true;
                 label.insertBefore(handle, label.firstChild);
 
-                ['up', 'down'].forEach(function(direction) {{
-                    const button = document.createElement('button');
-                    button.className = 'leafmap-layer-order-button';
-                    button.type = 'button';
-                    button.textContent = direction === 'up' ? '↑' : '↓';
-                    button.title = direction === 'up'
-                        ? 'Move layer up'
-                        : 'Move layer down';
-                    button.addEventListener('click', function(event) {{
-                        event.preventDefault();
-                        event.stopPropagation();
-                        reorderLabel(label, direction === 'up' ? -1 : 1);
-                    }});
-                    label.appendChild(button);
+                let pointerDragging = false;
+                let pointerId = null;
+
+                handle.addEventListener('pointerdown', function(event){{
+                    event.preventDefault();
+                    event.stopPropagation();
+                    pointerDragging = true;
+                    pointerId = event.pointerId;
+                    draggedLabel = label;
+                    label.classList.add('layer-dragging');
+                    handle.setPointerCapture(pointerId);
+                }});
+
+                handle.addEventListener('pointermove', function(event){{
+                    if (!pointerDragging || event.pointerId !== pointerId) {{
+                        return;
+                    }}
+
+                    event.preventDefault();
+                    const target = document.elementFromPoint(
+                        event.clientX,
+                        event.clientY
+                    );
+                    const targetLabel = target && target.closest(
+                        '.leaflet-control-layers-overlays label'
+                    );
+
+                    if (!targetLabel || targetLabel === draggedLabel) {{
+                        return;
+                    }}
+
+                    const midpoint = targetLabel.getBoundingClientRect().top
+                        + targetLabel.offsetHeight / 2;
+
+                    if (event.clientY < midpoint) {{
+                        overlayList.insertBefore(draggedLabel, targetLabel);
+                    }} else {{
+                        overlayList.insertBefore(
+                            draggedLabel,
+                            targetLabel.nextSibling
+                        );
+                    }}
+
+                    applyLayerOrder();
+                }});
+
+                handle.addEventListener('pointerup', function(event){{
+                    if (event.pointerId !== pointerId) {{
+                        return;
+                    }}
+
+                    pointerDragging = false;
+                    pointerId = null;
+                    label.classList.remove('layer-dragging');
+                    draggedLabel = null;
+                    handle.releasePointerCapture(event.pointerId);
+                }});
+
+                handle.addEventListener('pointercancel', function(){{
+                    pointerDragging = false;
+                    pointerId = null;
+                    label.classList.remove('layer-dragging');
+                    draggedLabel = null;
                 }});
 
                 handle.addEventListener('dragstart', function(event){{
                     draggedLabel = label;
                     label.classList.add('layer-dragging');
+                    event.dataTransfer.setData('text/plain', label.dataset.layerName);
                     event.dataTransfer.effectAllowed = 'move';
                 }});
-
-                handle.addEventListener('dragend', function(){{
-                    label.classList.remove('layer-dragging');
-                    draggedLabel = null;
-                }});
-
-                label.addEventListener('dragover', function(event){{
-                    event.preventDefault();
-                }});
-
-                label.addEventListener('drop', function(event){{
-                    event.preventDefault();
-                    if (!draggedLabel || draggedLabel === label) {{
-                        return;
-                    }}
 
                     const labels = Array.from(overlayList.querySelectorAll('label'));
                     if (labels.indexOf(draggedLabel) < labels.indexOf(label)) {{
@@ -808,28 +1168,13 @@ def add_reorderable_layer_list(m):
                         overlayList.insertBefore(draggedLabel, label);
                     }}
 
-                    Array.from(overlayList.querySelectorAll('label')).forEach(function(item, index) {{
-                        const layer = findLayerByName(item.textContent.trim());
-                        if (!layer) {{
-                            return;
-                        }}
-                        const zIndex = 1000 - index;
-                        if (layer.setZIndex) {{
-                            layer.setZIndex(zIndex);
-                        }}
-                        if (layer.eachLayer) {{
-                            layer.eachLayer(function(child) {{
-                                if (child.setZIndex) {{
-                                    child.setZIndex(zIndex);
-                                }}
-                                if (child.bringToFront) {{
-                                    child.bringToFront();
-                                }}
-                            }});
-                        }}
-                    }});
+                    applyLayerOrder();
                 }});
             }});
+
+            map.on('overlayadd', applyLayerOrder);
+            map.on('overlayremove', applyLayerOrder);
+            setTimeout(applyLayerOrder, 300);
         }}
 
         setTimeout(enableLayerReordering, 500);
@@ -881,7 +1226,7 @@ def add_metric_scale_control(m):
     )
 
 
-def add_integrated_opacity_controls(m):
+def add_integrated_opacity_controls(m, base_opacity=0.8):
 
     map_variable = m.get_name()
 
@@ -891,6 +1236,11 @@ def add_integrated_opacity_controls(m):
         function setLayerOpacity(layer, value) {{
             if (!layer) {{
                 return;
+            }}
+
+            if (layer.options) {{
+                layer.options.opacity = value;
+                layer.options.fillOpacity = value;
             }}
 
             if (layer.setOpacity) {{
@@ -924,14 +1274,47 @@ def add_integrated_opacity_controls(m):
 
             overlayList.dataset.opacityReady = 'true';
 
-            function findLayerByName(layerName) {{
+            function findLayerByName(layerName, layerIndex) {{
+                const requestedName = String(layerName).trim();
                 let found = null;
+
+                Object.values(window).some(function(candidate){{
+                    if (candidate && candidate.overlays && candidate.overlays[requestedName]) {{
+                        found = candidate.overlays[requestedName];
+                        return true;
+                    }}
+
+                    if (!candidate || !Array.isArray(candidate._layers)) {{
+                        return false;
+                    }}
+
+                    const entry = candidate._layers.find(function(item){{
+                        return item && String(item.name || '').trim() === requestedName;
+                    }});
+
+                    if (entry && entry.layer) {{
+                        found = entry.layer;
+                        return true;
+                    }}
+
+                    return false;
+                }});
+
+                if (found) {{
+                    return found;
+                }}
 
                 Object.values(map._layers).some(function(layer) {{
                     const options = layer.options || {{}};
-                    const name = options.name || layer._layerControlName;
+                    const names = [
+                        options.name,
+                        layer._layerControlName,
+                        options.layerName
+                    ].filter(Boolean).map(function(name) {{
+                        return String(name).trim();
+                    }});
 
-                    if (name === layerName) {{
+                    if (names.includes(requestedName)) {{
                         found = layer;
                         return true;
                     }}
@@ -939,8 +1322,37 @@ def add_integrated_opacity_controls(m):
                     return false;
                 }});
 
-                return found;
+                if (found) {{
+                    return found;
+                }}
+
+                return null;
             }}
+
+            function keepBasemapsOpaque() {{
+                Object.values(window).forEach(function(candidate){{
+                    if (!candidate || !candidate.base_layers) {{
+                        return;
+                    }}
+
+                    Object.values(candidate.base_layers).forEach(function(layer){{
+                        if (layer && layer.setOpacity) {{
+                            layer.setOpacity({base_opacity});
+                        }}
+                    }});
+                }});
+
+                document.querySelectorAll(
+                    '.leaflet-tile-pane > .leaflet-layer'
+                ).forEach(function(tileLayer) {{
+                    const tile = tileLayer.querySelector('img');
+                    if (!tile || !tile.src.includes('titiler.xyz')) {{
+                        tileLayer.style.opacity = '{base_opacity}';
+                    }}
+                }});
+            }}
+
+            keepBasemapsOpaque();
 
             overlayList.querySelectorAll('label').forEach(function(label) {{
                 if (label.dataset.layerReorderReady) {{
@@ -948,8 +1360,52 @@ def add_integrated_opacity_controls(m):
                 }}
 
                 label.dataset.layerReorderReady = 'true';
+                label.dataset.layerName = label.dataset.layerName || label.textContent.trim();
                 const slider = document.createElement('input');
-                const layerName = label.textContent.trim();
+                const layerName = label.dataset.layerName || label.textContent.trim();
+                const opacityValue = document.createElement('span');
+                const opacityWrap = document.createElement('span');
+                const layerIndex = Array.from(
+                    overlayList.querySelectorAll('label')
+                ).indexOf(label);
+                const initialLayer = findLayerByName(layerName, layerIndex);
+                label._layerReference = initialLayer;
+                const initialOpacity = initialLayer?.options?.opacity ?? 1.0;
+
+                slider.type = 'range';
+                slider.min = '0';
+                slider.max = '1';
+                slider.step = '0.05';
+                slider.value = String(initialOpacity);
+                slider.title = 'Set layer transparency';
+                opacityValue.textContent = Math.round(initialOpacity * 100) + '%';
+                opacityWrap.className = 'leafmap-layer-opacity';
+                opacityWrap.title = 'Layer opacity';
+                opacityWrap.appendChild(slider);
+                opacityWrap.appendChild(opacityValue);
+                label.appendChild(opacityWrap);
+
+                slider.addEventListener('input', function(event){{
+                    event.stopPropagation();
+                    const value = Number(event.target.value);
+                    const targetLayer = label._layerReference;
+                    setLayerOpacity(targetLayer, value);
+                    keepBasemapsOpaque();
+
+                    if (targetLayer && targetLayer._image) {{
+                        targetLayer._image.style.opacity = value;
+                    }}
+
+                    opacityValue.textContent = Math.round(value * 100) + '%';
+                }});
+
+                slider.addEventListener('change', function(){{
+                    slider.dispatchEvent(new Event('input', {{ bubbles: false }}));
+                }});
+
+                slider.addEventListener('click', function(event){{
+                    event.stopPropagation();
+                }});
 
                 label.addEventListener('dragstart', function(event) {{
                     draggedLabel = label;
@@ -1025,6 +1481,118 @@ def add_integrated_opacity_controls(m):
 
     m.get_root().html.add_child(
         folium.Element(opacity_js)
+    )
+
+
+def add_tile_retry(m, url_fragment):
+
+    map_variable = m.get_name()
+
+    retry_js = f"""
+    <script>
+    (function() {{
+        function configureTileRetry() {{
+            if (typeof {map_variable} === "undefined") {{
+                setTimeout(configureTileRetry, 300);
+                return;
+            }}
+
+            const map = {map_variable};
+            const style = document.createElement("style");
+            style.textContent = ".leaflet-tile-pane .leaflet-tile {{ transition: none !important; }}";
+            document.head.appendChild(style);
+            const layers = Object.values(map._layers).filter(function(layer) {{
+                return layer._url && layer._url.includes("{url_fragment}");
+            }});
+
+            if (!layers.length) {{
+                setTimeout(configureTileRetry, 300);
+                return;
+            }}
+
+            layers.forEach(function(layer) {{
+                if (layer._retryReady) {{
+                    return;
+                }}
+
+                layer.on("tileerror", function(event){{
+                    const tile = event.tile;
+                    const coords = event.coords;
+                    const retryCount = tile._connectivityRetryCount || 0;
+
+                    if (retryCount >= 3 || !coords) {{
+                        return;
+                    }}
+
+                    tile._connectivityRetryCount = retryCount + 1;
+                    setTimeout(function(){{
+                        const tileUrl = layer.getTileUrl(coords);
+                        const separator = tileUrl.includes("?") ? "&" : "?";
+                        tile.src = tileUrl + separator + "retry=" + Date.now();
+                    }}, 500 * (retryCount + 1));
+                }});
+
+                layer._retryReady = true;
+                layer.options.keepBuffer = 4;
+                layer.options.updateWhenIdle = true;
+                layer.options.updateWhenZooming = false;
+
+                const container = layer.getContainer();
+                if (container) {{
+                    container.querySelectorAll('.leaflet-tile').forEach(function(tile) {{
+                        tile.style.transition = 'none';
+                    }});
+                }}
+            }});
+        }}
+
+        configureTileRetry();
+    }})();
+    </script>
+    """
+
+    m.get_root().html.add_child(
+        folium.Element(retry_js)
+    )
+
+
+def add_connectivity_tile_stability(m):
+
+    map_variable = m.get_name()
+
+    stability_js = f"""
+    <script>
+    (function() {{
+        function configureConnectivityTiles() {{
+            if (typeof {map_variable} === "undefined") {{
+                setTimeout(configureConnectivityTiles, 300);
+                return;
+            }}
+
+            const map = {map_variable};
+            const layers = Object.values(map._layers).filter(function(layer) {{
+                return layer._url && layer._url.includes("titiler.xyz");
+            }});
+
+            if (!layers.length) {{
+                setTimeout(configureConnectivityTiles, 300);
+                return;
+            }}
+
+            layers.forEach(function(layer) {{
+                layer.options.keepBuffer = 4;
+                layer.options.updateWhenIdle = true;
+                layer.options.updateWhenZooming = false;
+            }});
+        }}
+
+        configureConnectivityTiles();
+    }})();
+    </script>
+    """
+
+    m.get_root().html.add_child(
+        folium.Element(stability_js)
     )
 
 
@@ -1175,7 +1743,6 @@ difference_tile_url = titiler_tile_url(
     difference_cog
 )
 
-
 # =========================================================
 # MAP SETTINGS
 # =========================================================
@@ -1186,6 +1753,115 @@ MAP_CENTER = [
 ]
 
 MAP_ZOOM = 5
+
+
+def add_shared_map_sync(m, map_name):
+
+    map_variable = m.get_name()
+
+    sync_js = f"""
+    <script>
+    (function() {{
+        function initializeSharedSync() {{
+            if (typeof {map_variable} === "undefined") {{
+                setTimeout(initializeSharedSync, 300);
+                return;
+            }}
+
+            const map = {map_variable};
+            const channel = new BroadcastChannel("elephant_habitat_connectivity_sync");
+            let updatingFromSync = false;
+
+            channel.onmessage = function(event) {{
+                const data = event.data;
+                if (!data || data.source === "{map_name}") {{
+                    return;
+                }}
+
+                updatingFromSync = true;
+                map.setView(
+                    [data.lat, data.lng],
+                    data.zoom,
+                    {{ animate: false }}
+                );
+
+                setTimeout(function() {{
+                    updatingFromSync = false;
+                }}, 150);
+            }};
+
+            map.on("moveend", function() {{
+                if (updatingFromSync) {{
+                    return;
+                }}
+
+                const center = map.getCenter();
+                channel.postMessage({{
+                    source: "{map_name}",
+                    lat: center.lat,
+                    lng: center.lng,
+                    zoom: map.getZoom()
+                }});
+            }});
+        }}
+
+        initializeSharedSync();
+    }})();
+    </script>
+    """
+
+    m.get_root().html.add_child(
+        folium.Element(sync_js)
+    )
+
+
+def render_connectivity_legend(title, colors, labels):
+
+    legend_cmap = LinearSegmentedColormap.from_list(
+        "connectivity_legend",
+        colors,
+    )
+    legend_fig, legend_ax = plt.subplots(figsize=(14, 0.9))
+    legend_fig.subplots_adjust(
+        bottom=0.48,
+        left=0.02,
+        right=0.98,
+        top=0.82,
+    )
+    legend_bar = plt.colorbar(
+        plt.cm.ScalarMappable(
+            norm=Normalize(vmin=0, vmax=1),
+            cmap=legend_cmap,
+        ),
+        cax=legend_ax,
+        orientation="horizontal",
+    )
+    legend_bar.set_label(title, fontsize=10)
+    legend_bar.set_ticks(np.linspace(0, 1, len(labels)))
+    legend_bar.set_ticklabels(labels)
+    legend_bar.ax.tick_params(labelsize=9)
+    st.pyplot(legend_fig, use_container_width=True)
+
+
+def render_categorical_connectivity_legend(title, colors, labels):
+
+    handles = [
+        Patch(facecolor=color, edgecolor="none", label=label)
+        for color, label in zip(colors, labels)
+    ]
+    legend_fig, legend_ax = plt.subplots(figsize=(14, 0.7))
+    legend_fig.subplots_adjust(left=0.02, right=0.98, top=0.9, bottom=0.08)
+    legend_ax.axis("off")
+    legend_ax.legend(
+        handles=handles,
+        title=title,
+        loc="center",
+        ncol=len(handles),
+        frameon=False,
+        fontsize=10,
+        title_fontsize=10,
+    )
+    st.pyplot(legend_fig, use_container_width=True)
 
 
 if active_view == "Suitability":
@@ -1255,6 +1931,32 @@ if active_view == "Suitability":
     
     
                 const map = {map_variable};
+
+                let suitabilityExtentBox = null;
+
+                if ("{map_name}" === "difference") {{
+                    suitabilityExtentBox = L.rectangle(
+                        map.getBounds(),
+                        {{
+                            color: "#543A27",
+                            weight: 1.5,
+                            opacity: 0.8,
+                            fill: false,
+                            interactive: false
+                        }}
+                    ).addTo(map);
+                }}
+
+                function updateSuitabilityExtentBox(bounds) {{
+                    if (!suitabilityExtentBox || !bounds) {{
+                        return;
+                    }}
+
+                    suitabilityExtentBox.setBounds([
+                        [bounds.south, bounds.west],
+                        [bounds.north, bounds.east]
+                    ]);
+                }}
     
     
                 /*
@@ -1277,21 +1979,51 @@ if active_view == "Suitability":
                 let updatingFromSync = false;
 
                 const viewStorageKey = "elephant_habitat_view_{map_name}";
+                const sharedViewStorageKey = "elephant_habitat_shared_view";
 
                 function saveView() {{
 
                     const center = map.getCenter();
+                    const bounds = map.getBounds();
 
                     localStorage.setItem(
                         viewStorageKey,
                         JSON.stringify({{
                             lat: center.lat,
                             lng: center.lng,
-                            zoom: map.getZoom()
+                            zoom: map.getZoom(),
+                            bounds: {{
+                                north: bounds.getNorth(),
+                                south: bounds.getSouth(),
+                                east: bounds.getEast(),
+                                west: bounds.getWest()
+                            }}
                         }})
                     );
                 }}
-                            const layer = findLayerByName(item.dataset.layerName);
+
+                function restoreSharedExtent() {{
+                    if ("{map_name}" !== "difference") {{
+                        return;
+                    }}
+
+                    const sharedView = localStorage.getItem(
+                        sharedViewStorageKey
+                    );
+
+                    if (!sharedView) {{
+                        return;
+                    }}
+
+                    const view = JSON.parse(sharedView);
+                    map.setView(
+                        [view.lat, view.lng],
+                        view.zoom,
+                        {{ animate: false }}
+                    );
+                    updateSuitabilityExtentBox(view.bounds);
+                }}
+
                 function restoreView() {{
 
                     const savedView = localStorage.getItem(viewStorageKey);
@@ -1307,6 +2039,7 @@ if active_view == "Suitability":
                         view.zoom,
                         {{ animate: false }}
                     );
+
                 }}
     
     
@@ -1323,7 +2056,8 @@ if active_view == "Suitability":
                     }}
     
                     const center = map.getCenter();
-    
+                    const bounds = map.getBounds();
+
                     const message = {{
     
                         source: "{map_name}",
@@ -1332,15 +2066,26 @@ if active_view == "Suitability":
     
                         lng: center.lng,
     
-                        zoom: map.getZoom()
+                        zoom: map.getZoom(),
+                        bounds: {{
+                            north: bounds.getNorth(),
+                            south: bounds.getSouth(),
+                            east: bounds.getEast(),
+                            west: bounds.getWest()
+                        }}
     
                     }};
     
     
+                    localStorage.setItem(
+                        sharedViewStorageKey,
+                        JSON.stringify(message)
+                    );
+
                     channel.postMessage(message);
-    
+
                 }}
-    
+
     
                 /*
                  * ------------------------------------------------
@@ -1392,6 +2137,8 @@ if active_view == "Suitability":
     
                     );
 
+                    updateSuitabilityExtentBox(data.bounds);
+
                     saveView();
     
     
@@ -1403,6 +2150,13 @@ if active_view == "Suitability":
                     setTimeout(
                         function() {{
                             updatingFromSync = false;
+
+                            if (
+                                "{map_name}" !== "difference"
+                                && data.source === "difference"
+                            ) {{
+                                sendPosition();
+                            }}
                         }},
                         150
                     );
@@ -1441,6 +2195,7 @@ if active_view == "Suitability":
                  */
     
                 restoreView();
+                restoreSharedExtent();
 
                 setTimeout(
                     function() {{
@@ -1511,6 +2266,10 @@ if active_view == "Suitability":
             name=f"Present – {season} Season",
             attribution="TiTiler / Azure Blob Storage",
             opacity=opacity,
+            min_zoom=0,
+            max_zoom=30,
+            max_native_zoom=30,
+            no_wrap=True,
         )
     
         add_landcover_layer(m_present, opacity)
@@ -1568,6 +2327,10 @@ if active_view == "Suitability":
             name=f"2050 – {scenario} – {season}",
             attribution="TiTiler / Azure Blob Storage",
             opacity=opacity,
+            min_zoom=0,
+            max_zoom=30,
+            max_native_zoom=30,
+            no_wrap=True,
         )
     
         add_landcover_layer(m_2050, opacity)
@@ -1625,6 +2388,10 @@ if active_view == "Suitability":
             name=f"2100 – {scenario} – {season}",
             attribution="TiTiler / Azure Blob Storage",
             opacity=opacity,
+            min_zoom=0,
+            max_zoom=30,
+            max_native_zoom=30,
+            no_wrap=True,
         )
     
         add_landcover_layer(m_2100, opacity)
@@ -1764,7 +2531,20 @@ if active_view == "Suitability":
         url=difference_tile_url,
         name=f"Gain and loss – 2100 – {scenario} – {season}",
         attribution="TiTiler / Azure Blob Storage",
-        opacity=opacity,
+        opacity=1.0,
+        min_zoom=0,
+        max_zoom=30,
+        max_native_zoom=30,
+        no_wrap=True,
+        bounds=[
+            [kaza_bbox[1], kaza_bbox[0]],
+            [kaza_bbox[3], kaza_bbox[2]],
+        ],
+    )
+
+    add_tile_retry(
+        m_difference,
+        "Difference_2100_Present"
     )
     
     add_landcover_layer(m_difference, opacity)
@@ -1801,14 +2581,7 @@ if active_view == "Suitability":
         vmax=1
     )
 
-    diff_cmap = LinearSegmentedColormap.from_list(
-        "diff_cmap",
-        [
-            (1.0, 0.0, 0.0),
-            (1.0, 1.0, 1.0),
-            (0.0, 0.0, 1.0)
-        ]
-    )
+    diff_cmap = plt.get_cmap("RdBu")
 
     difference_cbar = plt.colorbar(
         plt.cm.ScalarMappable(
@@ -1846,67 +2619,181 @@ if active_view == "Suitability":
     )
 if active_view == "Connectivity":
 
-    st.markdown(
-        "### Connectivity and corridor layers"
-    )
-
-    st.caption(
-        "Explore present and future corridor quality, no-regret corridors, "
-        "and core habitats for SSP5-8.5. "
-        "Use the layer control to compare datasets."
-    )
-
-    connectivity_map = leafmap.Map(
-        center=MAP_CENTER,
-        zoom=MAP_ZOOM,
-        scale_control=False,
-    )
-
-    connectivity_layers = {
-        "Present Dry corridors": BASE_URL + "Present_Dry_Corridors.tif",
-        "Future Dry corridors": BASE_URL + "Future_Dry_Corridors.tif",
+    connectivity_sources = {
         "Present Wet corridors": BASE_URL + "Present_Wet_Corridors.tif",
         "Future Wet corridors": BASE_URL + "Future_Wet_Corridors.tif",
-        "Quality corridors – Present Dry": BASE_URL + "Quality_Corridors_Dry_Present.tif",
-        "Quality corridors – Future Dry": BASE_URL + "Quality_Corridors_Dry_Future.tif",
+        "Present Dry corridors": BASE_URL + "Present_Dry_Corridors.tif",
+        "Future Dry corridors": BASE_URL + "Future_Dry_Corridors.tif",
         "Quality corridors – Present Wet": BASE_URL + "Quality_Corridors_Wet_Present.tif",
         "Quality corridors – Future Wet": BASE_URL + "Quality_Corridors_Wet_Future.tif",
+        "Quality corridors – Present Dry": BASE_URL + "Quality_Corridors_Dry_Present.tif",
+        "Quality corridors – Future Dry": BASE_URL + "Quality_Corridors_Dry_Future.tif",
         "No-regret corridors – Moderate": BASE_URL + "No_Regret_Moderate.tif",
         "No-regret corridors – Strong": BASE_URL + "No_Regret_Strong.tif",
         "Core habitats": BASE_URL + "Core_Habitats_070.tif",
     }
 
-    default_connectivity_layers = {
-        f"Present {season} corridors",
-        f"Future {season} corridors",
-        "No-regret corridors – Moderate",
-        "No-regret corridors – Strong",
-        "Core habitats",
-    }
+    core_overlay_url, core_overlay_bounds = core_habitat_overlay_data(
+        connectivity_sources["Core habitats"]
+    )
 
-    for layer_name, layer_cog in connectivity_layers.items():
+    def add_connectivity_layer(connectivity_map, layer_name, show=False):
 
-        layer_tile_url = titiler_tile_url(layer_cog)
+        if layer_name == "Core habitats":
+            overlay_url = core_overlay_url
+            overlay_bounds = core_overlay_bounds
+        else:
+            overlay_url, overlay_bounds = connectivity_overlay_data(
+                connectivity_sources[layer_name],
+            )
 
-        if layer_name == "Core habitats" or layer_name.startswith("Quality corridors"):
-            layer_tile_url += "&nodata=0"
-
-        folium.TileLayer(
-            tiles=layer_tile_url,
+        folium.raster_layers.ImageOverlay(
+            image=overlay_url,
+            bounds=overlay_bounds,
             name=layer_name,
-            attr="TiTiler / Azure Blob Storage",
-            overlay=True,
-            control=True,
-            show=layer_name in default_connectivity_layers,
-            opacity=opacity,
+            attribution="Azure Blob Storage",
+            show=show,
+            opacity=1.0,
+            interactive=False,
         ).add_to(connectivity_map)
 
-    add_kaza_boundary(connectivity_map)
+    def build_connectivity_map(
+        map_title,
+        primary_layer,
+        map_name,
+        extra_layers=None,
+        show_core=False,
+        height=430,
+    ):
 
-    add_map_controls(connectivity_map)
+        connectivity_map = leafmap.Map(
+            center=MAP_CENTER,
+            zoom=MAP_ZOOM,
+            scale_control=False,
+        )
 
-    connectivity_map.to_streamlit(
-        height=700
+        add_connectivity_layer(
+            connectivity_map,
+            primary_layer,
+            show=True,
+        )
+
+        for layer_name in extra_layers or []:
+            add_connectivity_layer(
+                connectivity_map,
+                layer_name,
+                show=layer_name == "Core habitats" and show_core,
+            )
+
+        if "Core habitats" not in (extra_layers or []) and primary_layer != "Core habitats":
+            add_connectivity_layer(
+                connectivity_map,
+                "Core habitats",
+                show=show_core,
+            )
+
+        add_kaza_boundary(connectivity_map)
+        add_map_controls(connectivity_map, with_opacity=True, base_opacity=0.65)
+        add_shared_map_sync(connectivity_map, map_name)
+
+        st.markdown(
+            f'<div class="map-year">{map_title}</div>',
+            unsafe_allow_html=True,
+        )
+        connectivity_map.to_streamlit(height=height)
+
+    def render_connectivity_grid(map_specs, key_prefix):
+
+        for row_start in range(0, len(map_specs), 2):
+            columns = st.columns(2)
+            for column, spec in zip(columns, map_specs[row_start:row_start + 2]):
+                with column:
+                    build_connectivity_map(
+                        map_title=spec[0],
+                        primary_layer=spec[1],
+                        map_name=f"{key_prefix}_{row_start}_{spec[2]}",
+                        extra_layers=spec[3],
+                    )
+
+    st.markdown("### Corridor layers through time and seasons")
+    st.caption(
+        "Compare present and future corridor availability in wet and dry seasons. "
+        "Core habitats are available in the layer list."
+    )
+    render_connectivity_grid(
+        [
+            ("Present Wet", "Present Wet corridors", "present_wet", []),
+            ("Future Wet", "Future Wet corridors", "future_wet", []),
+            ("Present Dry", "Present Dry corridors", "present_dry", []),
+            ("Future Dry", "Future Dry corridors", "future_dry", []),
+        ],
+        "corridors",
+    )
+    render_connectivity_legend(
+        "Corridor resistance",
+        ["#4D9221", "#E5B957", "#D73027"],
+        ["Low resistance", "Medium resistance", "High resistance"],
+    )
+    render_categorical_connectivity_legend(
+        "",
+        ["#543A27"],
+        ["Core habitat"],
+    )
+
+    st.markdown("### Quality layers through time and seasons")
+    st.caption(
+        "Each map shows corridor quality for a present or future condition "
+        "in the wet or dry season. Core habitats are available in the layer list."
+    )
+    render_connectivity_grid(
+        [
+            ("Present Wet", "Quality corridors – Present Wet", "quality_present_wet", []),
+            ("Future Wet", "Quality corridors – Future Wet", "quality_future_wet", []),
+            ("Present Dry", "Quality corridors – Present Dry", "quality_present_dry", []),
+            ("Future Dry", "Quality corridors – Future Dry", "quality_future_dry", []),
+        ],
+        "quality",
+    )
+    render_categorical_connectivity_legend(
+        "Corridor quality",
+        ["#F28E2B", "#4D9221", "#543A27"],
+        ["Moderate", "Strong", "Core habitat"],
+    )
+
+    st.markdown("### No-regret corridors")
+    st.caption(
+        "Explore no-regret corridor candidates and core habitats across seasonal "
+        "and future conditions. Quality corridors and core habitats are available "
+        "in the layer list."
+    )
+
+    no_regret_map = leafmap.Map(
+        center=MAP_CENTER,
+        zoom=MAP_ZOOM,
+        scale_control=False,
+    )
+
+    add_connectivity_layer(no_regret_map, "No-regret corridors – Moderate", show=True)
+    add_connectivity_layer(no_regret_map, "No-regret corridors – Strong", show=True)
+    add_connectivity_layer(no_regret_map, "Core habitats", show=False)
+
+    for quality_layer in [
+        "Quality corridors – Present Wet",
+        "Quality corridors – Future Wet",
+        "Quality corridors – Present Dry",
+        "Quality corridors – Future Dry",
+    ]:
+        add_connectivity_layer(no_regret_map, quality_layer, show=False)
+
+    add_kaza_boundary(no_regret_map)
+    add_map_controls(no_regret_map, with_opacity=True, base_opacity=0.65)
+    add_shared_map_sync(no_regret_map, "no_regret")
+
+    no_regret_map.to_streamlit(height=560)
+    render_categorical_connectivity_legend(
+        "No-regret corridors",
+        ["#F28E2B", "#4D9221", "#543A27"],
+        ["Moderate", "Strong", "Core habitat"],
     )
     
 
