@@ -408,27 +408,16 @@ with st.sidebar:
 
     st.markdown("### Climate scenario")
 
-    if active_view == "Connectivity":
-        scenario = st.radio(
-            "Select scenario",
-            [
-                "SSP1-2.6",
-                "SSP5-8.5",
-            ],
-            index=1,
-            disabled=True,
-            label_visibility="collapsed",
-        )
-    else:
-        scenario = st.radio(
-            "Select scenario",
-            [
-                "SSP1-2.6",
-                "SSP5-8.5",
-            ],
-            index=0,
-            label_visibility="collapsed",
-        )
+    scenario = st.radio(
+        "Select scenario",
+        [
+            "SSP1-2.6",
+            "SSP5-8.5",
+        ],
+        index=1 if active_view == "Connectivity" else 0,
+        disabled=active_view == "Connectivity",
+        label_visibility="collapsed",
+    )
 
 
     # -----------------------------------------------------
@@ -444,6 +433,7 @@ with st.sidebar:
             "Dry",
         ],
         index=0,
+        disabled=active_view == "Connectivity",
         label_visibility="collapsed",
     )
 
