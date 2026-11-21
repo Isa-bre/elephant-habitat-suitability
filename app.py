@@ -872,10 +872,10 @@ def add_reorderable_layer_list(m):
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
-            flex: 0 0 28px;
-            width: 28px;
+            flex: 0 0 16px;
+            width: 16px;
             height: 18px;
-            margin-right: 3px;
+            margin-right: 0px;
             color: transparent;
             cursor: grab;
             background-image: radial-gradient(circle, #543A27 1.6px, transparent 2px);
@@ -954,7 +954,7 @@ def add_reorderable_layer_list(m):
             align-items: center;
             gap: 4px;
             justify-content: end;
-            width: 92px;
+            width: 72px;
             grid-column: 2;
             color: #5D6414;
             font-size: 10px;
@@ -962,8 +962,8 @@ def add_reorderable_layer_list(m):
         }}
 
         .leafmap-layer-opacity input {{
-            width: 52px;
-            flex: 0 0 52px;
+            width: 40px;
+            flex: 0 0 40px;
             accent-color: #543A27;
             cursor: ew-resize;
         }}
