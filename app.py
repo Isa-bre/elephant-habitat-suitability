@@ -872,10 +872,10 @@ def add_reorderable_layer_list(m):
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
-            flex: 0 0 10px;
-            width: 10px;
+            flex: 0 0 18px;
+            width: 18px;
             height: 18px;
-            margin-right: 2px;
+            margin-right: 8px;
             color: transparent;
             cursor: grab;
             background-image: radial-gradient(circle, #543A27 1.6px, transparent 2px);
