@@ -2655,7 +2655,7 @@ if active_view == "Connectivity":
                 connectivity_sources[layer_name],
             )
 
-        folium.raster_layers.ImageOverlay(
+        layer = folium.raster_layers.ImageOverlay(
             image=overlay_url,
             bounds=overlay_bounds,
             name=layer_name,
@@ -2663,7 +2663,12 @@ if active_view == "Connectivity":
             show=show,
             opacity=1.0,
             interactive=False,
-        ).add_to(connectivity_map)
+        )
+        
+        layer.add_to(connectivity_map)
+        
+        if layer_name == "Resilient corridors":
+            layer.options["zIndex"] = 1000
 
     def build_connectivity_map(
         map_title,
