@@ -685,20 +685,22 @@ def connectivity_overlay_data(cog_url, color=None):
     vmin = np.percentile(valid_values, 2)
     vmax = np.percentile(valid_values, 98)
     
-    norm = np.clip(
-        (values.astype(float) - vmin) / (vmax - vmin),
-        0,
-        1,
+    norm = 1 - (
+        np.clip(
+            (values.astype(float) - vmin) / (vmax - vmin),
+            0,
+            1,
+        )
     )
     
     corridor_cmap = LinearSegmentedColormap.from_list(
         "corridors",
         [
-            "#1A7A3C",
-            "#4A7C43",
-            "#8B973C",
-            "#DCCB88",
             "#A86452",
+            "#DCCB88",
+            "#8B973C",
+            "#4A7C43",
+            "#1A7A3C",
         ]
     )
     
