@@ -1422,18 +1422,18 @@ def add_integrated_opacity_controls(m, base_opacity=0.8):
                     event.stopPropagation();
                 }});
                 
-                slider.addEventListener('mousedown', function(event){
+                slider.addEventListener('mousedown', function(event){{
                     event.stopPropagation();
-                });
+                }});
                 
-                slider.addEventListener('pointerdown', function(event){
+                slider.addEventListener('pointerdown', function(event){{
                     event.stopPropagation();
-                });
+                }});
                 
-                slider.addEventListener('dragstart', function(event){
+                slider.addEventListener('dragstart', function(event){{
                     event.preventDefault();
                     event.stopPropagation();
-                });
+                }});
 
                 label.addEventListener('dragstart', function(event) {{
                     draggedLabel = label;
