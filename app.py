@@ -924,8 +924,17 @@ def add_reorderable_layer_list(m):
         .leaflet-control-layers-overlays label > span:nth-child(1) {{
             display: flex !important;
             align-items: center;
-            gap: 4px;
+            gap: 2px;
             flex: 1;
+            justify-content: flex-start;
+        }}
+
+        .leaflet-control-layers-overlays input[type="checkbox"] {{
+            margin-right: 2px !important;
+        }}
+        
+        .leaflet-control-layers-overlays input[type="radio"] {{
+            margin-right: 2px !important;
         }}
 
         .leaflet-control-layers-overlays label > span:nth-child(1) > span {{
