@@ -657,66 +657,32 @@ def core_habitat_overlay_data(cog_url):
 
 
 @st.cache_data(show_spinner=False)
-def connectivity_overlay_data(cog_url, color=None):
+def connectivity_overlay_data(cog_url):
 
     response = requests.get(cog_url, timeout=60)
     response.raise_for_status()
 
     with MemoryFile(response.content) as memory_file:
         with memory_file.open() as dataset:
-            values = dataset.read(1)
+
+            rgb = dataset.read([1, 2, 3])
+
             bounds = transform_bounds(
                 dataset.crs,
                 "EPSG:4326",
                 *dataset.bounds,
             )
-            nodata = dataset.nodata
-            try:
-                native_colormap = dataset.colormap(1)
-            except ValueError:
-                native_colormap = None
 
-    mask = values != 255
+    rgb = np.moveaxis(rgb, 0, 2)
 
-    rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
-    
-    valid_values = values[values != 255]
-    
-    vmin = np.percentile(valid_values, 2)
-    vmax = np.percentile(valid_values, 98)
-    
-    norm = 1 - (
-        np.clip(
-            (values.astype(float) - vmin) / (vmax - vmin),
-            0,
-            1,
-        )
-    )
+    image = Image.fromarray(rgb, mode="RGB")
 
-    norm = norm ** 3
-    
-    corridor_cmap = LinearSegmentedColormap.from_list(
-        "corridors",
-        [
-            "#B16B58",
-            "#E5D7A4",
-            "#A9B85C",
-            "#5E8F4D",
-            "#0C6B3A",
-        ]
-    )
-    
-    rgb = (corridor_cmap(norm) * 255).astype(np.uint8)
-    
-    rgba[..., 0] = rgb[..., 0]
-    rgba[..., 1] = rgb[..., 1]
-    rgba[..., 2] = rgb[..., 2]
-    rgba[..., 3] = np.where(mask, 255, 0)
-
-    image = Image.fromarray(rgba, mode="RGBA")
     output = BytesIO()
-    image.save(output, format="PNG", optimize=True)
-    encoded_image = base64.b64encode(output.getvalue()).decode("ascii")
+    image.save(output, format="PNG")
+
+    encoded_image = base64.b64encode(
+        output.getvalue()
+    ).decode("ascii")
 
     return (
         "data:image/png;base64," + encoded_image,
