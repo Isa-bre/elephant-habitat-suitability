@@ -682,11 +682,13 @@ def connectivity_overlay_data(cog_url, color=None):
 
     rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
 
-    rgba[(values > 0) & (values <= 20000)] = [26, 122, 60, 255]      # #1A7A3C
-    rgba[(values > 20000) & (values <= 40000)] = [74, 124, 67, 255]  # #4A7C43
-    rgba[(values > 40000) & (values <= 60000)] = [139, 151, 60, 255] # #8B973C
-    rgba[(values > 60000) & (values <= 80000)] = [220, 203, 136, 255]# #DCCB88
-    rgba[(values > 80000) & (values <= 100000)] = [168, 100, 82, 255]# #A86452
+    rgba[(values >= 0) & (values < 51)] = [26, 122, 60, 255]      # #1A7A3C
+    rgba[(values >= 51) & (values < 102)] = [74, 124, 67, 255]    # #4A7C43
+    rgba[(values >= 102) & (values < 153)] = [139, 151, 60, 255]  # #8B973C
+    rgba[(values >= 153) & (values < 204)] = [220, 203, 136, 255] # #DCCB88
+    rgba[(values >= 204) & (values < 255)] = [168, 100, 82, 255]  # #A86452
+
+rgba[values == 255] = [0, 0, 0, 0]
 
     image = Image.fromarray(rgba, mode="RGBA")
     output = BytesIO()
