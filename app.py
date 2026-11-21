@@ -1032,26 +1032,35 @@ def add_reorderable_layer_list(m):
                 return found;
             }}
 
-            function applyLayerOrder() {{
-                Array.from(overlayList.querySelectorAll('label')).forEach(function(item, index){{
-                    const layer = findLayerByName(item.dataset.layerName);
-                    if (!layer) {{
-                        return;
-                    }}
+            function applyLayerOrder() {
 
-                    const zIndex = 1000 - index;
-                    if (layer.setZIndex) {{
-                        layer.setZIndex(zIndex);
-                    }}
-                    if (layer.eachLayer) {{
-                        layer.eachLayer(function(child){{
-                            if (child.setZIndex) {{
-                                child.setZIndex(zIndex);
-                            }}
-                        }});
-                    }}
-                }});
-            }}
+                Array.from(
+                    overlayList.querySelectorAll('label')
+                ).reverse().forEach(function(item){
+            
+                    const layer = findLayerByName(
+                        item.dataset.layerName
+                    );
+            
+                    if (!layer) {
+                        return;
+                    }
+            
+                    if (layer.bringToFront) {
+                        layer.bringToFront();
+                    }
+            
+                    if (layer.eachLayer) {
+                        layer.eachLayer(function(child){
+            
+                            if (child.bringToFront) {
+                                child.bringToFront();
+                            }
+            
+                        });
+                    }
+                });
+            }
 
             function reorderLabel(label, direction) {{
                 const labels = Array.from(overlayList.querySelectorAll('label'));
@@ -2666,9 +2675,9 @@ if active_view == "Connectivity":
         )
         
         layer.add_to(connectivity_map)
-        
+
         if layer_name == "Resilient corridors":
-            layer.options["zIndex"] = 1000
+            layer._name = "Resilient corridors"
 
     def build_connectivity_map(
         map_title,
