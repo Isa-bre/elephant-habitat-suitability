@@ -447,7 +447,7 @@ with st.sidebar:
                     <b>Author</b><br>
                     Isabelle Breton<br>
                     <br>
-                    <span style="font-size:11px;">
+                    <span style="font-size:12px;">
                     Master of Science in Geographical Information Science<br>
                     Department of Earth and Environmental Sciences<br>
                     <b>Lund University</b>
