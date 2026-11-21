@@ -2790,7 +2790,7 @@ if active_view == "Connectivity":
 
     st.markdown("### Resilient corridors")
     st.caption(
-        "Explore no-regret corridor candidates and core habitats across seasonal "
+        "Explore resilient corridor candidates and core habitats across seasonal "
         "and future conditions. Quality corridors and core habitats are available "
         "in the layer list."
     )
