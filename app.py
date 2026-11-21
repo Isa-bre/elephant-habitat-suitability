@@ -1098,6 +1098,7 @@ def add_reorderable_layer_list(m):
 
             overlayList.querySelectorAll('label').forEach(function(label){{
                 label.dataset.layerName = label.dataset.layerName || label.textContent.trim();
+                return;
                 label.draggable = true;
 
                 const handle = document.createElement('span');
