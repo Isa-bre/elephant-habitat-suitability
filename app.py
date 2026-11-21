@@ -675,7 +675,16 @@ def connectivity_overlay_data(cog_url):
 
     rgb = np.moveaxis(rgb, 0, 2)
 
-    image = Image.fromarray(rgb, mode="RGB")
+    # Make black pixels transparent
+    alpha = np.where(
+        np.all(rgb == [0, 0, 0], axis=2),
+        0,
+        255
+    ).astype(np.uint8)
+    
+    rgba = np.dstack([rgb, alpha])
+    
+    image = Image.fromarray(rgba, mode="RGBA")
 
     output = BytesIO()
     image.save(output, format="PNG")
