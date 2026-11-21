@@ -1165,16 +1165,6 @@ def add_reorderable_layer_list(m):
                     event.dataTransfer.setData('text/plain', label.dataset.layerName);
                     event.dataTransfer.effectAllowed = 'move';
                 }});
-
-                    const labels = Array.from(overlayList.querySelectorAll('label'));
-                    if (labels.indexOf(draggedLabel) < labels.indexOf(label)) {{
-                        overlayList.insertBefore(draggedLabel, label.nextSibling);
-                    }} else {{
-                        overlayList.insertBefore(draggedLabel, label);
-                    }}
-
-                    applyLayerOrder();
-                }});
             }});
 
             map.on('overlayadd', applyLayerOrder);
@@ -2667,9 +2657,6 @@ if active_view == "Connectivity":
         
         layer.add_to(connectivity_map)
 
-        if layer_name == "Resilient corridors":
-            layer._name = "Resilient corridors"
-
     def build_connectivity_map(
         map_title,
         primary_layer,
@@ -2804,7 +2791,7 @@ if active_view == "Connectivity":
         zoom=MAP_ZOOM,
         scale_control=False,
     )
-    add_connectivity_layer(no_regret_map, "Resilient corridors", show=True)
+
     add_connectivity_layer(no_regret_map, "Core habitats", show=False)
 
     for quality_layer in [
@@ -2814,6 +2801,7 @@ if active_view == "Connectivity":
         "Quality corridors – Future Dry",
     ]:
         add_connectivity_layer(no_regret_map, quality_layer, show=False)
+    add_connectivity_layer(no_regret_map, "Resilient corridors", show=True)
     
 
     add_kaza_boundary(no_regret_map)
