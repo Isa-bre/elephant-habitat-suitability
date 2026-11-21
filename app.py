@@ -1033,33 +1033,23 @@ def add_reorderable_layer_list(m):
             }}
 
             function applyLayerOrder() {{
-
-                Array.from(
-                    overlayList.querySelectorAll('label')
-                ).reverse().forEach(function(item){{
-            
-                    const layer = findLayerByName(
-                        item.dataset.layerName
-                    );
-            
+                Array.from(overlayList.querySelectorAll('label')).forEach(function(item, index){{
+                    const layer = findLayerByName(item.dataset.layerName);
                     if (!layer) {{
                         return;
                     }}
             
-                    if (layer.bringToFront) {{
-                        layer.bringToFront();
+                    const zIndex = 1000 - index;
+                    if (layer.setZIndex) {{
+                        layer.setZIndex(zIndex);
                     }}
-            
                     if (layer.eachLayer) {{
                         layer.eachLayer(function(child){{
-            
-                            if (child.bringToFront) {{
-                                child.bringToFront();
+                            if (child.setZIndex) {{
+                                child.setZIndex(zIndex);
                             }}
-            
                         }});
                     }}
-            
                 }});
             }}
 
