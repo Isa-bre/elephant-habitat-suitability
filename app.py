@@ -2775,14 +2775,16 @@ if active_view == "Connectivity":
     render_categorical_connectivity_legend(
         "Corridor quality",
         [
-            "#A86452",
-            "#D7C27A",
-            "#1F5A32"
+            "#A86452",  # Excluded
+            "#D7C27A",  # Moderate
+            "#1F5A32",  # Strong
+            "#F2F2D9",  # Core habitat
         ],
         [
             "Excluded (>50,000)",
             "Moderate corridor (10,000–50,000)",
-            "Strong corridor (0–10,000)"
+            "Strong corridor (0–10,000)",
+            "Core habitat",
         ],
     )
 
