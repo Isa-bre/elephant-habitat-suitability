@@ -15,7 +15,7 @@ from rasterio.warp import transform_bounds
 from rasterio.transform import from_bounds
 from io import BytesIO
 from urllib.parse import quote, urlencode
-
+from scipy import ndimage
 
 st.set_page_config(
     page_title="Elephant Habitat Suitability",
