@@ -676,19 +676,29 @@ def connectivity_overlay_data(cog_url, color=None):
             except ValueError:
                 native_colormap = None
 
-    mask = values > 0
-    if nodata is not None:
-        mask &= values != nodata
+    mask = values != 255
 
     rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
-
-    rgba[(values >= 0) & (values < 51)] = [26, 122, 60, 255]      # #1A7A3C
-    rgba[(values >= 51) & (values < 102)] = [74, 124, 67, 255]    # #4A7C43
-    rgba[(values >= 102) & (values < 153)] = [139, 151, 60, 255]  # #8B973C
-    rgba[(values >= 153) & (values < 204)] = [220, 203, 136, 255] # #DCCB88
-    rgba[(values >= 204) & (values < 255)] = [168, 100, 82, 255]  # #A86452
-
-    rgba[values == 255] = [0, 0, 0, 0]
+    
+    norm = values.astype(float) / 254.0
+    
+    corridor_cmap = LinearSegmentedColormap.from_list(
+        "corridors",
+        [
+            "#1A7A3C",
+            "#4A7C43",
+            "#8B973C",
+            "#DCCB88",
+            "#A86452",
+        ]
+    )
+    
+    rgb = (corridor_cmap(norm) * 255).astype(np.uint8)
+    
+    rgba[..., 0] = rgb[..., 0]
+    rgba[..., 1] = rgb[..., 1]
+    rgba[..., 2] = rgb[..., 2]
+    rgba[..., 3] = np.where(mask, 255, 0)
 
     image = Image.fromarray(rgba, mode="RGBA")
     output = BytesIO()
