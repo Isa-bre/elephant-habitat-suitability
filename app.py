@@ -682,14 +682,11 @@ def connectivity_overlay_data(cog_url, color=None):
 
     rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
 
-    if native_colormap:
-        color_table = np.array(
-            [native_colormap.get(index, (0, 0, 0, 0)) for index in range(256)],
-            dtype=np.uint8,
-        )
-        rgba[mask] = color_table[values[mask]]
-    elif color:
-        rgba[mask] = [*color, 255]
+    rgba[(values > 0) & (values <= 20000)] = [26, 122, 60, 255]      # #1A7A3C
+    rgba[(values > 20000) & (values <= 40000)] = [74, 124, 67, 255]  # #4A7C43
+    rgba[(values > 40000) & (values <= 60000)] = [139, 151, 60, 255] # #8B973C
+    rgba[(values > 60000) & (values <= 80000)] = [220, 203, 136, 255]# #DCCB88
+    rgba[(values > 80000) & (values <= 100000)] = [168, 100, 82, 255]# #A86452
 
     image = Image.fromarray(rgba, mode="RGBA")
     output = BytesIO()
