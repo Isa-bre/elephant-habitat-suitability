@@ -2799,7 +2799,7 @@ if active_view == "Connectivity":
         zoom=MAP_ZOOM,
         scale_control=False,
     )
-
+    add_connectivity_layer(no_regret_map, "Resilient corridors", show=True)
     add_connectivity_layer(no_regret_map, "Core habitats", show=False)
 
     for quality_layer in [
@@ -2810,7 +2810,6 @@ if active_view == "Connectivity":
     ]:
         add_connectivity_layer(no_regret_map, quality_layer, show=False)
     
-    add_connectivity_layer(no_regret_map, "Resilient corridors", show=True)
 
     add_kaza_boundary(no_regret_map)
     add_map_controls(no_regret_map, with_opacity=True, base_opacity=0.65)
