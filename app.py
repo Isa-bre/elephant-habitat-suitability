@@ -2811,6 +2811,8 @@ if active_view == "Connectivity":
         "Quality corridors – Future Dry",
     ]:
         add_connectivity_layer(no_regret_map, quality_layer, show=False)
+    
+    add_connectivity_layer(no_regret_map, "Resilient corridors", show=True)
 
     add_kaza_boundary(no_regret_map)
     add_map_controls(no_regret_map, with_opacity=True, base_opacity=0.65)
