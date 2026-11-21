@@ -692,15 +692,17 @@ def connectivity_overlay_data(cog_url, color=None):
             1,
         )
     )
+
+    norm = norm ** 3
     
     corridor_cmap = LinearSegmentedColormap.from_list(
         "corridors",
         [
-            "#A86452",
-            "#DCCB88",
-            "#8B973C",
-            "#4A7C43",
-            "#1A7A3C",
+            "#B16B58",
+            "#E5D7A4",
+            "#A9B85C",
+            "#5E8F4D",
+            "#0C6B3A",
         ]
     )
     
