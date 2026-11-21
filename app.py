@@ -1861,7 +1861,7 @@ def render_connectivity_legend(title, colors, labels):
 def render_categorical_connectivity_legend(title, colors, labels):
 
     handles = [
-        Patch(facecolor=color, edgecolor="none", label=label)
+        Patch(facecolor=color, edgecolor="BDBDBD", linewidth=0.8, label=label)
         for color, label in zip(colors, labels)
     ]
     legend_fig, legend_ax = plt.subplots(figsize=(18, 2.0))
