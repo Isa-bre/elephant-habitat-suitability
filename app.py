@@ -1002,8 +1002,7 @@ def add_reorderable_layer_list(m):
             }}
 
             overlayList.dataset.reorderReady = 'true';
-            return;
-
+          
             let draggedLabel = null;
 
             function findLayerByName(layerName){{
@@ -2801,7 +2800,6 @@ if active_view == "Connectivity":
         scale_control=False,
     )
 
-    add_connectivity_layer(no_regret_map, "Resilient corridors", show=True)
     add_connectivity_layer(no_regret_map, "Core habitats", show=False)
 
     for quality_layer in [
