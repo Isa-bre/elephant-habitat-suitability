@@ -1099,13 +1099,22 @@ def add_reorderable_layer_list(m):
 
             overlayList.querySelectorAll('label').forEach(function(label){{
                 label.dataset.layerName = label.dataset.layerName || label.textContent.trim();
-                label.draggable = true;
+                label.draggable = false;
 
                 const handle = document.createElement('span');
                 handle.className = 'leafmap-layer-drag-handle';
                 handle.textContent = '';
                 handle.title = 'Drag to change layer order';
                 handle.draggable = true;
+                handle.addEventListener('dragstart', function(event){{
+                    draggedLabel = label;
+                    label.classList.add('layer-dragging');
+                    event.dataTransfer.setData(
+                        'text/plain',
+                        label.dataset.layerName
+                    );
+                    event.dataTransfer.effectAllowed = 'move';
+                }});
                 const textContainer = label.querySelector('span');
                 if (textContainer) {{
                     textContainer.insertBefore(
@@ -1433,13 +1442,6 @@ def add_integrated_opacity_controls(m, base_opacity=0.8):
                 slider.addEventListener('dragstart', function(event){{
                     event.preventDefault();
                     event.stopPropagation();
-                }});
-
-                label.addEventListener('dragstart', function(event) {{
-                    draggedLabel = label;
-                    label.classList.add('layer-dragging');
-                    event.dataTransfer.setData('text/plain', layerName);
-                    event.dataTransfer.effectAllowed = 'move';
                 }});
 
                 label.addEventListener('dragend', function() {{
