@@ -447,9 +447,6 @@ with st.sidebar:
                     <b>Author</b><br>
                     Isabelle Breton<br>
                     <br>
-                    <b>Supervisor</b><br>
-                    Lanhui Wang<br>
-                    <br>
                     Master of Science in Geographical Information Science<br>
                     Department of Earth and Environmental Sciences <br>
                     <b>Lund University</b>
