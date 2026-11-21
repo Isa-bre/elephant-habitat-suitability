@@ -459,7 +459,7 @@ with st.sidebar:
     )
 
 
-opacity = 0.7
+opacity = 0.5
 
 
 # =========================================================
@@ -716,7 +716,7 @@ def add_kaza_boundary(m):
         name="KAZA TFCA boundary",
         style_function=lambda feature: {
             "color": LUND_BROWN,
-            "weight": 3,
+            "weight": 1,
                 "fill": False,
                 "fillColor": "transparent",
                 "fillOpacity": 0,
