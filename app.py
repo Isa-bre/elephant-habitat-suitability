@@ -2655,16 +2655,15 @@ if active_view == "Suitability":
 if active_view == "Connectivity":
 
     connectivity_sources = {
-        "Present Wet corridors": BASE_URL + "Present_Wet_Corridors.tif",
-        "Future Wet corridors": BASE_URL + "Future_Wet_Corridors.tif",
-        "Present Dry corridors": BASE_URL + "Present_Dry_Corridors.tif",
-        "Future Dry corridors": BASE_URL + "Future_Dry_Corridors.tif",
-        "Quality corridors – Present Wet": BASE_URL + "Quality_Corridors_Wet_Present.tif",
-        "Quality corridors – Future Wet": BASE_URL + "Quality_Corridors_Wet_Future.tif",
-        "Quality corridors – Present Dry": BASE_URL + "Quality_Corridors_Dry_Present.tif",
-        "Quality corridors – Future Dry": BASE_URL + "Quality_Corridors_Dry_Future.tif",
-        "No-regret corridors – Moderate": BASE_URL + "No_Regret_Moderate.tif",
-        "No-regret corridors – Strong": BASE_URL + "No_Regret_Strong.tif",
+        "Present Wet corridors": BASE_URL + "Wet_Present_rendered_COG.tif",
+        "Future Wet corridors": BASE_URL + "Wet_Future_rendered_COG.tif",
+        "Present Dry corridors": BASE_URL + "Dry_Present_rendered_COG.tif",
+        "Future Dry corridors": BASE_URL + "Dry_Future_rendered_COG.tif",
+        "Quality corridors – Present Wet": BASE_URL + "Present_wet_quality_corridors_rendered_COG.tif",
+        "Quality corridors – Future Wet": BASE_URL + "Future_wet_quality_corridors_rendered_COG.tif",
+        "Quality corridors – Present Dry": BASE_URL + "Present_dry_quality_corridors_rendered_COG.tif",
+        "Quality corridors – Future Dry": BASE_URL + "Future_dry_quality_corridors_rendered_COG.tif",
+        "No-regret corridors – Moderate": BASE_URL + "Resilient_Corridors_rendered_COG.tif",
         "Core habitats": BASE_URL + "Core_Habitats_070.tif",
     }
 
