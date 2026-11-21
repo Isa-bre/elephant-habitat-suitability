@@ -2638,7 +2638,7 @@ if active_view == "Connectivity":
         "Quality corridors – Future Wet": BASE_URL + "Future_wet_quality_corridors_rendered_COG.tif",
         "Quality corridors – Present Dry": BASE_URL + "Present_dry_quality_corridors_rendered_COG.tif",
         "Quality corridors – Future Dry": BASE_URL + "Future_dry_quality_corridors_rendered_COG.tif",
-        "No-regret corridors – Moderate": BASE_URL + "Resilient_Corridors_rendered_COG.tif",
+        "Resilient corridors": BASE_URL + "Resilient_Corridors_rendered_COG.tif",
         "Core habitats": BASE_URL + "Core_Habitats_070.tif",
     }
 
@@ -2791,8 +2791,7 @@ if active_view == "Connectivity":
         scale_control=False,
     )
 
-    add_connectivity_layer(no_regret_map, "No-regret corridors – Moderate", show=True)
-    add_connectivity_layer(no_regret_map, "No-regret corridors – Strong", show=True)
+    add_connectivity_layer(no_regret_map, "Resilient corridors", show=True)
     add_connectivity_layer(no_regret_map, "Core habitats", show=False)
 
     for quality_layer in [
