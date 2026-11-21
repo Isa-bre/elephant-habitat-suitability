@@ -618,7 +618,15 @@ def core_habitat_overlay_data(cog_url):
         habitat_mask &= values != nodata
 
     rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
-    rgba[habitat_mask] = [84, 58, 39, 255]
+
+    # fill
+    rgba[habitat_mask] = [242, 242, 217, 255]
+    
+    # boundary
+    eroded = ndimage.binary_erosion(habitat_mask)
+    outline = habitat_mask & ~eroded
+    
+    rgba[outline] = [138, 147, 99, 255]
 
     image = Image.fromarray(rgba, mode="RGBA")
     output = BytesIO()
@@ -2731,7 +2739,7 @@ if active_view == "Connectivity":
         "#8B973C",
         "#DCCB88",
         "#A86452",
-        "#543A27"
+        "#F2F2D9"
     ],
     [
         "0–20,000 (Lowest cost)",
