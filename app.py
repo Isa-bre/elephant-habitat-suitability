@@ -2752,6 +2752,7 @@ if active_view == "Connectivity":
     render_categorical_connectivity_legend(
     "Accumulated movement cost",
     [
+        "#FFFFFF",  # Least-cost path
         "#1A7A3C",
         "#4A7C43",
         "#8B973C",
@@ -2760,6 +2761,7 @@ if active_view == "Connectivity":
         "#F2F2D9"
     ],
     [
+        "Least-cost path (optimal route)",
         "0–20,000 (Lowest cost)",
         "20,000–40,000 (Low cost)",
         "40,000–60,000 (Moderate cost)",
