@@ -773,7 +773,7 @@ def add_map_controls(m, with_opacity=False, base_opacity=0.8):
     if with_opacity:
         add_integrated_opacity_controls(m, base_opacity)
 
-
+    add_reorderable_layer_list(m)
 
 def add_reorderable_layer_list(m):
 
