@@ -1033,23 +1033,33 @@ def add_reorderable_layer_list(m):
             }}
 
             function applyLayerOrder() {{
-                Array.from(overlayList.querySelectorAll('label')).forEach(function(item, index){{
-                    const layer = findLayerByName(item.dataset.layerName);
+
+                const labels = Array.from(
+                    overlayList.querySelectorAll('label')
+                );
+            
+                labels.forEach(function(item){{
+            
+                    const layer = findLayerByName(
+                        item.dataset.layerName
+                    );
+            
                     if (!layer) {{
                         return;
                     }}
             
-                    const zIndex = 1000 - index;
-                    if (layer.setZIndex) {{
-                        layer.setZIndex(zIndex);
+                    if (layer.bringToFront) {{
+                        layer.bringToFront();
                     }}
+            
                     if (layer.eachLayer) {{
                         layer.eachLayer(function(child){{
-                            if (child.setZIndex) {{
-                                child.setZIndex(zIndex);
+                            if (child.bringToFront) {{
+                                child.bringToFront();
                             }}
                         }});
                     }}
+            
                 }});
             }}
 
@@ -1443,26 +1453,16 @@ def add_integrated_opacity_controls(m, base_opacity=0.8):
                             return;
                         }}
 
-                        const zIndex = 1000 - index;
-
-                        if (layer.setZIndex) {{
-                            layer.setZIndex(zIndex);
+                        if (layer.bringToFront) {{
+                            layer.bringToFront();
                         }}
-
+                        
                         if (layer.eachLayer) {{
                             layer.eachLayer(function(child) {{
-                                if (child.setZIndex) {{
-                                    child.setZIndex(zIndex);
-                                }}
-
                                 if (child.bringToFront) {{
                                     child.bringToFront();
                                 }}
                             }});
-                        }}
-
-                        if (layer.bringToFront) {{
-                            layer.bringToFront();
                         }}
                     }});
                 }});
