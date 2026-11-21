@@ -2719,16 +2719,25 @@ if active_view == "Connectivity":
         ],
         "corridors",
     )
-    render_connectivity_legend(
-        "Corridor resistance",
-        ["#4D9221", "#E5B957", "#D73027"],
-        ["Low resistance", "Medium resistance", "High resistance"],
-    )
     render_categorical_connectivity_legend(
-        "",
-        ["#543A27"],
-        ["Core habitat"],
-    )
+    "Accumulated movement cost",
+    [
+        "#1A7A3C",
+        "#4A7C43",
+        "#8B973C",
+        "#DCCB88",
+        "#A86452",
+        "#543A27"
+    ],
+    [
+        "0–20,000 (Lowest cost)",
+        "20,000–40,000 (Low cost)",
+        "40,000–60,000 (Moderate cost)",
+        "60,000–80,000 (High cost)",
+        "80,000–100,000 (Highest cost)",
+        "Core habitat"
+    ],
+)
 
     st.markdown("### Quality layers through time and seasons")
     st.caption(
