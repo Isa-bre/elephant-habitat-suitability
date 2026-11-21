@@ -983,12 +983,6 @@ def add_reorderable_layer_list(m):
             text-align: right;
         }}
 
-        .leaflet-control-layers-overlays label > span:nth-child(1) {{
-            grid-column: 1;
-            min-width: 0;
-            width: auto;
-        }}
-
         .leaflet-control-layers-overlays label.layer-dragging {{
             opacity: 0.45;
             background: #E2D0A2;
