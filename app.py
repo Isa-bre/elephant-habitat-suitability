@@ -688,7 +688,7 @@ def connectivity_overlay_data(cog_url, color=None):
     rgba[(values >= 153) & (values < 204)] = [220, 203, 136, 255] # #DCCB88
     rgba[(values >= 204) & (values < 255)] = [168, 100, 82, 255]  # #A86452
 
-rgba[values == 255] = [0, 0, 0, 0]
+    rgba[values == 255] = [0, 0, 0, 0]
 
     image = Image.fromarray(rgba, mode="RGBA")
     output = BytesIO()
