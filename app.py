@@ -1107,12 +1107,12 @@ def add_reorderable_layer_list(m):
                 handle.title = 'Drag to change layer order';
                 handle.draggable = true;
                 const textContainer = label.querySelector('span');
-                if (textContainer) {
+                if (textContainer) {{
                     textContainer.insertBefore(
                         handle,
                         textContainer.firstChild
                     );
-                }
+                }}
 
                 let pointerDragging = false;
                 let pointerId = null;
