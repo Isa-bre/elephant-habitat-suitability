@@ -394,7 +394,7 @@ with st.sidebar:
         <div class="sidebar-copy">
             <p class="identity-copy thesis-label">Master's Thesis</p>
             <p class="identity-title">
-                Forecasting Habitat Suitability for African Savanna Elephants in a Changing World
+                Forecasting Habitat Connectivity for African Savanna Elephants in a Changing World: Corridor Resilience under Climate and Land-Use Change in KAZA
             </p>
         </div>
         """,
