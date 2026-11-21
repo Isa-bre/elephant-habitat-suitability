@@ -1839,17 +1839,21 @@ def render_categorical_connectivity_legend(title, colors, labels):
         Patch(facecolor=color, edgecolor="none", label=label)
         for color, label in zip(colors, labels)
     ]
-    legend_fig, legend_ax = plt.subplots(figsize=(14, 1.3))
+    legend_fig, legend_ax = plt.subplots(figsize=(16, 2.0))
     legend_fig.subplots_adjust(left=0.02, right=0.98, top=0.95, bottom=0.15)
     legend_ax.axis("off")
     legend_ax.legend(
         handles=handles,
         title=title,
         loc="center",
-        ncol=1,
+        ncol=2,
         frameon=False,
-        fontsize=10,
-        title_fontsize=10,
+        fontsize=14,
+        title_fontsize=16,
+        handlelength=2.0,
+        handletextpad=0.8,
+        columnspacing=2.0,
+        labelspacing=1.0,
     )
     st.pyplot(legend_fig, use_container_width=True)
 
