@@ -15,7 +15,6 @@ from rasterio.warp import transform_bounds
 from rasterio.transform import from_bounds
 from io import BytesIO
 from urllib.parse import quote, urlencode
-from scipy import ndimage
 
 st.set_page_config(
     page_title="Elephant Habitat Suitability",
@@ -623,8 +622,20 @@ def core_habitat_overlay_data(cog_url):
     rgba[habitat_mask] = [242, 242, 217, 255]
     
     # boundary
-    eroded = ndimage.binary_erosion(habitat_mask)
-    outline = habitat_mask & ~eroded
+    rgba = np.zeros((*values.shape, 4), dtype=np.uint8)
+
+    # Fill
+    rgba[habitat_mask] = [242, 242, 217, 255]
+    
+    # Outline
+    outline = np.zeros_like(habitat_mask, dtype=bool)
+    
+    outline[1:, :] |= habitat_mask[1:, :] != habitat_mask[:-1, :]
+    outline[:-1, :] |= habitat_mask[:-1, :] != habitat_mask[1:, :]
+    outline[:, 1:] |= habitat_mask[:, 1:] != habitat_mask[:, :-1]
+    outline[:, :-1] |= habitat_mask[:, :-1] != habitat_mask[:, 1:]
+    
+    outline &= habitat_mask
     
     rgba[outline] = [138, 147, 99, 255]
 
