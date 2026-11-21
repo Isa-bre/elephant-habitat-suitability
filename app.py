@@ -1032,35 +1032,36 @@ def add_reorderable_layer_list(m):
                 return found;
             }}
 
-            function applyLayerOrder() {
+            function applyLayerOrder() {{
 
                 Array.from(
                     overlayList.querySelectorAll('label')
-                ).reverse().forEach(function(item){
+                ).reverse().forEach(function(item){{
             
                     const layer = findLayerByName(
                         item.dataset.layerName
                     );
             
-                    if (!layer) {
+                    if (!layer) {{
                         return;
-                    }
+                    }}
             
-                    if (layer.bringToFront) {
+                    if (layer.bringToFront) {{
                         layer.bringToFront();
-                    }
+                    }}
             
-                    if (layer.eachLayer) {
-                        layer.eachLayer(function(child){
+                    if (layer.eachLayer) {{
+                        layer.eachLayer(function(child){{
             
-                            if (child.bringToFront) {
+                            if (child.bringToFront) {{
                                 child.bringToFront();
-                            }
+                            }}
             
-                        });
-                    }
-                });
-            }
+                        }});
+                    }}
+            
+                }});
+            }}
 
             function reorderLabel(label, direction) {{
                 const labels = Array.from(overlayList.querySelectorAll('label'));
