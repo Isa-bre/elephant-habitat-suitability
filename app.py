@@ -2774,8 +2774,16 @@ if active_view == "Connectivity":
     )
     render_categorical_connectivity_legend(
         "Corridor quality",
-        ["#F28E2B", "#4D9221", "#543A27"],
-        ["Moderate", "Strong", "Core habitat"],
+        [
+            "#A86452",
+            "#D7C27A",
+            "#1F5A32"
+        ],
+        [
+            "Excluded (>50,000)",
+            "Moderate corridor (10,000–50,000)",
+            "Strong corridor (0–10,000)"
+        ],
     )
 
     st.markdown("### No-regret corridors")
