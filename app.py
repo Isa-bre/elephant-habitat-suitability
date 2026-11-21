@@ -926,7 +926,7 @@ def add_reorderable_layer_list(m):
             align-items: center;
             gap: 4px;
             flex: 1;
-        }
+        }}
 
         .leaflet-control-layers-overlays label > span:nth-child(1) > span {{
             white-space: normal;
