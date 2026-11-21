@@ -852,7 +852,7 @@ def add_reorderable_layer_list(m):
 
         .leaflet-control-layers-overlays label {{
             cursor: default;
-            display: grid;
+            display: flex;
             grid-template-columns: minmax(0, 1fr) 92px;
             align-items: center;
             column-gap: 6px;
@@ -921,12 +921,12 @@ def add_reorderable_layer_list(m):
             cursor: grabbing;
         }}
 
-        .leaflet-control-layers-overlays label > span:nth-child(1) {{
-            min-width: 0;
-            overflow: visible;
-            white-space: normal;
-            line-height: 1.25;
-        }}
+        ..leaflet-control-layers-overlays label > span:nth-child(1) {
+            display: flex !important;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+        }
 
         .leaflet-control-layers-overlays label > span:nth-child(1) > span {{
             white-space: normal;
@@ -954,6 +954,7 @@ def add_reorderable_layer_list(m):
             align-items: center;
             gap: 4px;
             justify-content: end;
+            margin-left: auto;
             width: 72px;
             grid-column: 2;
             color: #5D6414;
