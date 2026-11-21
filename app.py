@@ -872,10 +872,10 @@ def add_reorderable_layer_list(m):
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
-            flex: 0 0 16px;
-            width: 16px;
+            flex: 0 0 10px;
+            width: 10px;
             height: 18px;
-            margin-right: 0px;
+            margin-right: 2px;
             color: transparent;
             cursor: grab;
             background-image: radial-gradient(circle, #543A27 1.6px, transparent 2px);
@@ -1106,7 +1106,13 @@ def add_reorderable_layer_list(m):
                 handle.textContent = '';
                 handle.title = 'Drag to change layer order';
                 handle.draggable = true;
-                label.insertBefore(handle, label.firstChild);
+                const textContainer = label.querySelector('span');
+                if (textContainer) {
+                    textContainer.insertBefore(
+                        handle,
+                        textContainer.firstChild
+                    );
+                }
 
                 let pointerDragging = false;
                 let pointerId = null;
