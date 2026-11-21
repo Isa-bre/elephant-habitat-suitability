@@ -218,8 +218,8 @@ st.markdown(
 
     .identity-details {{
         color: {PALETTE_INK};
-        font-size: 13px;
-        line-height: 1.45;
+        font-size: 10px;
+        line-height: 1.3;
     }}
 
     .elephant-panel {{
