@@ -2788,7 +2788,7 @@ if active_view == "Connectivity":
         ],
     )
 
-    st.markdown("### No-regret corridors")
+    st.markdown("### Resilient corridors")
     st.caption(
         "Explore no-regret corridor candidates and core habitats across seasonal "
         "and future conditions. Quality corridors and core habitats are available "
@@ -2814,13 +2814,21 @@ if active_view == "Connectivity":
 
     add_kaza_boundary(no_regret_map)
     add_map_controls(no_regret_map, with_opacity=True, base_opacity=0.65)
-    add_shared_map_sync(no_regret_map, "no_regret")
+    add_shared_map_sync(no_regret_map, "resilient")
 
     no_regret_map.to_streamlit(height=560)
     render_categorical_connectivity_legend(
-        "No-regret corridors",
-        ["#F28E2B", "#4D9221", "#543A27"],
-        ["Moderate", "Strong", "Core habitat"],
+        "Resilient corridors",
+        [
+            "#D7B08A",  # Moderate resilient corridor
+            "#1A7A3C",  # Strong resilient corridor
+            "#F2F2D9",  # Core habitat
+        ],
+        [
+            "Moderate resilient corridor",
+            "Strong resilient corridor",
+            "Core habitat",
+        ],
     )
     
 
